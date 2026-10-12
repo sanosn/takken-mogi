@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>宅建 直前総復習</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="宅建総復習">
+<meta name="theme-color" content="#0f766e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<style>
+  :root {
+    --bg: #f6f7fb; --card: #ffffff; --text: #1f2430; --sub: #6b7280; --line: #e5e7eb;
+    --main: #0f766e; --mainbg: #e6f4f2; --onmain: #ffffff;
+    --ok: #16a34a; --okbg: #e7f8ee; --ng: #dc2626; --ngbg: #fdecec;
+  }
+  /* ダークモード（端末の設定に従う／表示側で明示的に切り替えた場合も反映） */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12141a; --card: #1c1f27; --text: #e8eaf0; --sub: #9aa1ad; --line: #2c3040;
+      --main: #2dd4bf; --mainbg: #143330; --onmain: #0b2b28;
+      --ok: #4ade80; --okbg: #163323; --ng: #f87171; --ngbg: #3a1a1a;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12141a; --card: #1c1f27; --text: #e8eaf0; --sub: #9aa1ad; --line: #2c3040;
+    --main: #2dd4bf; --mainbg: #143330; --onmain: #0b2b28;
+    --ok: #4ade80; --okbg: #163323; --ng: #f87171; --ngbg: #3a1a1a;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
+    line-height: 1.6;
+  }
+  .wrap {
+    max-width: 640px; margin: 0 auto;
+    padding: calc(20px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right))
+             calc(40px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+  }
+  button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  h1 { font-size: 1.5rem; margin: 8px 0 4px; }
+  h2 { font-size: 1.05rem; margin: 0 0 10px; }
+  .lead { color: var(--sub); margin: 0 0 16px; font-size: .95rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  .hidden { display: none !important; }
+  button { font: inherit; cursor: pointer; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--text); padding: 12px 14px; }
+  button:disabled { cursor: default; opacity: .5; }
+  .menu { display: grid; gap: 10px; }
+  .menu button { text-align: left; font-weight: 600; }
+  .menu button small { display: block; font-weight: 400; color: var(--sub); }
+  .menu button.primary { background: var(--main); color: var(--onmain); border-color: var(--main); }
+  .menu button.primary small { color: var(--onmain); opacity: .85; }
+
+  .summary { display: flex; gap: 10px; text-align: center; }
+  .summary > div { flex: 1; }
+  .summary b { display: block; font-size: 1.5rem; }
+  .summary span { color: var(--sub); font-size: .8rem; }
+
+  .fields { display: grid; gap: 8px; }
+  .field { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 10px; text-align: left; }
+  .field .name { font-weight: 700; }
+  .field .stat { color: var(--sub); font-size: .85rem; }
+  .meter { grid-column: 1 / -1; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .meter > div { height: 100%; background: var(--main); }
+
+  .bar { display: flex; justify-content: space-between; align-items: center; color: var(--sub); font-size: .9rem; margin-bottom: 8px; }
+  .progress { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin-bottom: 14px; }
+  .progress > div { height: 100%; background: var(--main); width: 0; transition: width .2s; }
+  .tag { display: inline-block; font-size: .78rem; padding: 2px 8px; border-radius: 999px; background: var(--mainbg); color: var(--main); margin: 0 4px 8px 0; }
+  .q { font-size: 1.08rem; font-weight: 600; min-height: 5em; }
+  .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+  .choice { padding: 14px 8px; font-size: 1.6rem; font-weight: 800; border-width: 2px; }
+  .choice small { display: block; font-size: .75rem; font-weight: 400; color: var(--sub); }
+  .choice.o { color: var(--ok); border-color: var(--ok); }
+  .choice.x { color: var(--ng); border-color: var(--ng); }
+  .choice.dim { opacity: .3; }
+
+  .result { margin-top: 14px; padding: 14px; border-radius: 12px; }
+  .result.ok { background: var(--okbg); }
+  .result.ng { background: var(--ngbg); }
+  .result .head { font-weight: 800; font-size: 1.1rem; }
+  .result.ok .head { color: var(--ok); }
+  .result.ng .head { color: var(--ng); }
+  .result p { margin: 6px 0 0; }
+  .basis { color: var(--sub); font-size: .85rem; }
+  .next { width: 100%; margin-top: 12px; background: var(--text); color: var(--bg); border: none; font-weight: 700; }
+
+  .score { font-size: 2.6rem; font-weight: 800; text-align: center; margin: 4px 0; }
+  .center { text-align: center; color: var(--sub); }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .row button { flex: 1; min-width: 140px; font-weight: 600; }
+  ul.list { list-style: none; padding: 0; margin: 0; }
+  ul.list li { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  ul.list li:last-child { border-bottom: none; }
+  ul.list .note { color: var(--sub); font-size: .88rem; }
+  .mark { display: inline-block; font-weight: 800; width: 1.6em; }
+  .mark.o { color: var(--ok); } .mark.x { color: var(--ng); }
+  .miss { color: var(--ng); font-size: .75rem; font-weight: 700; margin-left: 4px; }
+  .back { background: none; border: none; color: var(--sub); padding: 6px 0; }
+  .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .filters button { padding: 6px 12px; font-size: .85rem; border-radius: 999px; }
+  .filters button.on { background: var(--main); color: var(--onmain); border-color: var(--main); }
+  label.opt { display: flex; gap: 8px; align-items: center; font-size: .9rem; margin-bottom: 10px; }
+  details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
+  .foot { color: var(--sub); font-size: .8rem; margin-top: 18px; }
+  .foot a { color: var(--main); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ホーム -->
+  <section id="home">
+    <h1>宅建 直前総復習</h1>
+    <p class="lead">全分野の頻出論点を○×で総ざらい。間違えた問題は自動で「苦手」に入ります。</p>
+
+    <div class="card summary">
+      <div><b id="sumDone">0</b><span>解いた問題</span></div>
+      <div><b id="sumRate">-</b><span>正答率</span></div>
+      <div><b id="sumWeak">0</b><span>苦手</span></div>
+    </div>
+
+    <div class="card">
+      <div class="menu">
+        <button class="primary" id="smartBtn">今日の総復習 20問<small>苦手 → 未回答 → その他 の順に優先して出題</small></button>
+        <button id="weakBtn">苦手だけ解く<small id="weakSub"></small></button>
+        <button id="allBtn">全問をシャッフル<small id="allSub"></small></button>
+        <button id="sheetBtn">要点チェックシート<small>答えと解説を一覧で確認（試験前の見直しに）</small></button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>分野別に解く</h2>
+      <div class="fields" id="fieldList"></div>
+    </div>
+
+    <details class="card">
+      <summary>このアプリについて</summary>
+      <ul class="note" style="padding-left:1.2em;margin:6px 0">
+        <li>問題はすべてオリジナルです。令和5〜7年度の本試験で繰り返し出題されている論点を選んで作成しました（過去問の文章は使っていません）。</li>
+        <li id="lawAsOf"></li>
+        <li>内容は見直しを行っていますが、誤りが残っている可能性があります。各問の根拠条文で確認してください。</li>
+        <li>本物の過去問は <a href="https://www.retio.or.jp/exam/past_ques_ans/other/" target="_blank" rel="noopener">不動産適正取引推進機構（RETIO）の公式ページ</a> で公開されています。</li>
+      </ul>
+      <button id="resetBtn" style="margin-top:6px;font-size:.85rem">学習記録をリセット</button>
+    </details>
+  </section>
+
+  <!-- 問題 -->
+  <section id="quiz" class="hidden">
+    <div class="bar"><button class="back" id="quitBtn">← やめる</button><span id="counter"></span></div>
+    <div class="progress"><div id="prog"></div></div>
+    <div class="card">
+      <span class="tag" id="qfield"></span><span class="tag" id="qtopic"></span>
+      <div class="q" id="qtext"></div>
+      <div class="choices">
+        <button class="choice o" data-a="1">○<small>正しい（1）</small></button>
+        <button class="choice x" data-a="0">×<small>誤り（2）</small></button>
+      </div>
+      <div id="result" class="result hidden"></div>
+      <button class="next hidden" id="nextBtn">次へ</button>
+    </div>
+  </section>
+
+  <!-- 結果 -->
+  <section id="end" class="hidden">
+    <div class="card">
+      <div class="center">結果</div>
+      <div class="score" id="score"></div>
+      <div class="center" id="scoreSub"></div>
+    </div>
+    <div class="card" id="missCard">
+      <h2>まちがえた問題</h2>
+      <ul class="list" id="missList"></ul>
+    </div>
+    <div class="row">
+      <button id="retryMissBtn">まちがえた問題をもう一度</button>
+      <button id="homeBtn">ホームに戻る</button>
+    </div>
+  </section>
+
+  <!-- 要点チェックシート -->
+  <section id="sheet" class="hidden">
+    <button class="back" id="sheetBack">← 戻る</button>
+    <h1>要点チェックシート</h1>
+    <div class="filters" id="sheetFilters"></div>
+    <label class="opt"><input type="checkbox" id="sheetWeak"> 苦手な問題だけ表示</label>
+    <div id="sheetBody"></div>
+  </section>
+
+  <p class="foot">オリジナル問題による学習用アプリです。本試験の問題・解答とは関係ありません。</p>
+</div>
+
+<script src="questions.js"></script>
+<script>
+const FIELDS = ["権利関係", "法令上の制限", "税・価格", "宅建業法", "5問免除"];
+const $ = id => document.getElementById(id);
+
+// ---- 学習記録（端末内に保存。保存できない環境でも動くようにする） ----
+// { 問題id: { c: 正解回数, w: 不正解回数, last: 直近が正解なら1・不正解なら0 } }
+const STORE_KEY = "takkenmogi_v1";
+function loadRec() { try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { return {}; } }
+function saveRec() { try { localStorage.setItem(STORE_KEY, JSON.stringify(rec)); } catch {} }
+let rec = loadRec();
+const isWeak = q => rec[q.id] && rec[q.id].last === 0;
+const isDone = q => !!rec[q.id];
+
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+function show(id) {
+  ["home", "quiz", "end", "sheet"].forEach(s => $(s).classList.toggle("hidden", s !== id));
+  window.scrollTo(0, 0);
+}
+
+// ---- ホーム ----
+function stats(qs) {
+  let c = 0, t = 0;
+  qs.forEach(q => { const r = rec[q.id]; if (r) { c += r.c; t += r.c + r.w; } });
+  return { done: qs.filter(isDone).length, rate: t ? Math.round(c / t * 100) : null, weak: qs.filter(isWeak).length };
+}
+function renderHome() {
+  const s = stats(QUESTIONS);
+  $("sumDone").textContent = `${s.done}/${QUESTIONS.length}`;
+  $("sumRate").textContent = s.rate === null ? "-" : s.rate + "%";
+  $("sumWeak").textContent = s.weak;
+  $("weakSub").textContent = s.weak ? `${s.weak}問` : "まだありません";
+  $("weakBtn").disabled = !s.weak;
+  $("allSub").textContent = `全${QUESTIONS.length}問`;
+  $("lawAsOf").textContent = `法令は ${LAW_AS_OF.replace(/-/g, "/")} 時点の内容にもとづいています。`;
+  $("fieldList").innerHTML = "";
+  FIELDS.forEach(f => {
+    const qs = QUESTIONS.filter(q => q.f === f);
+    const fs = stats(qs);
+    const b = document.createElement("button");
+    b.className = "field";
+    b.innerHTML = `<span class="name">${f}</span>
+      <span class="stat">${fs.done}/${qs.length}問　${fs.rate === null ? "" : "正答率" + fs.rate + "%"}${fs.weak ? "　苦手" + fs.weak : ""}</span>
+      <div class="meter"><div style="width:${fs.done / qs.length * 100}%"></div></div>`;
+    b.onclick = () => startQuiz(shuffle(qs.slice()));
+    $("fieldList").appendChild(b);
+  });
+  show("home");
+}
+
+// 今日の総復習：苦手 → 未回答 → その他 の順で20問
+function smartDeck(n = 20) {
+  const weak = shuffle(QUESTIONS.filter(isWeak));
+  const fresh = shuffle(QUESTIONS.filter(q => !isDone(q)));
+  const rest = shuffle(QUESTIONS.filter(q => isDone(q) && !isWeak(q)));
+  return [...weak, ...fresh, ...rest].slice(0, n);
+}
+
+// ---- 出題 ----
+let deck = [], idx = 0, correct = 0, wrongs = [], answered = false;
+
+function startQuiz(items) {
+  if (!items.length) return;
+  deck = items; idx = 0; correct = 0; wrongs = [];
+  show("quiz");
+  renderQ();
+}
+function renderQ() {
+  const q = deck[idx];
+  answered = false;
+  $("counter").textContent = `${idx + 1} / ${deck.length}　正解 ${correct}`;
+  $("prog").style.width = (idx / deck.length * 100) + "%";
+  $("qfield").textContent = q.f;
+  $("qtopic").textContent = q.t;
+  $("qtext").textContent = q.q;
+  document.querySelectorAll(".choice").forEach(b => { b.disabled = false; b.classList.remove("dim"); });
+  $("result").classList.add("hidden");
+  $("nextBtn").classList.add("hidden");
+}
+function answer(userO) {
+  if (answered) return;
+  answered = true;
+  const q = deck[idx];
+  const ok = userO === q.a;
+  const r = rec[q.id] || { c: 0, w: 0, last: 0 };
+  if (ok) { correct++; r.c++; r.last = 1; } else { wrongs.push(q); r.w++; r.last = 0; }
+  rec[q.id] = r;
+  saveRec();
+  document.querySelectorAll(".choice").forEach(b => {
+    b.disabled = true;
+    if ((b.dataset.a === "1") !== q.a) b.classList.add("dim");
+  });
+  const box = $("result");
+  box.className = "result " + (ok ? "ok" : "ng");
+  box.innerHTML = `<div class="head">${ok ? "正解" : "不正解"}　答え：${q.a ? "○" : "×"}</div>
+    <p></p><p class="basis"></p>`;
+  box.children[1].textContent = q.e;
+  box.children[2].textContent = "根拠：" + q.b;
+  $("nextBtn").textContent = idx + 1 < deck.length ? "次へ（Enter）" : "結果を見る（Enter）";
+  $("nextBtn").classList.remove("hidden");
+  $("counter").textContent = `${idx + 1} / ${deck.length}　正解 ${correct}`;
+}
+function next() {
+  idx++;
+  if (idx < deck.length) renderQ(); else finish();
+}
+function finish() {
+  $("prog").style.width = "100%";
+  const pct = Math.round(correct / deck.length * 100);
+  $("score").textContent = `${correct} / ${deck.length}`;
+  $("scoreSub").textContent = pct === 100 ? "全問正解！" : `正答率 ${pct}%`;
+  $("missCard").classList.toggle("hidden", !wrongs.length);
+  $("retryMissBtn").classList.toggle("hidden", !wrongs.length);
+  $("missList").innerHTML = "";
+  wrongs.forEach(q => $("missList").appendChild(itemLi(q, false)));
+  show("end");
+}
+
+// 一覧の1行（答え・問題文・解説）
+function itemLi(q, showMiss) {
+  const li = document.createElement("li");
+  li.innerHTML = `<span class="mark ${q.a ? "o" : "x"}">${q.a ? "○" : "×"}</span><span class="qt"></span>${showMiss && isWeak(q) ? '<span class="miss">苦手</span>' : ""}<div class="note"></div>`;
+  li.querySelector(".qt").textContent = q.q;
+  li.querySelector(".note").textContent = `${q.e}（${q.b}）`;
+  return li;
+}
+
+// ---- 要点チェックシート ----
+let sheetField = FIELDS[0];
+function renderSheet() {
+  $("sheetFilters").innerHTML = "";
+  FIELDS.forEach(f => {
+    const b = document.createElement("button");
+    b.textContent = f;
+    b.className = f === sheetField ? "on" : "";
+    b.onclick = () => { sheetField = f; renderSheet(); };
+    $("sheetFilters").appendChild(b);
+  });
+  const qs = QUESTIONS.filter(q => q.f === sheetField && (!$("sheetWeak").checked || isWeak(q)));
+  const body = $("sheetBody");
+  body.innerHTML = "";
+  if (!qs.length) { body.innerHTML = '<div class="card center">該当する問題はありません</div>'; return; }
+  const topics = [...new Set(qs.map(q => q.t))];
+  topics.forEach(t => {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `<h2></h2><ul class="list"></ul>`;
+    card.querySelector("h2").textContent = t;
+    qs.filter(q => q.t === t).forEach(q => card.querySelector("ul").appendChild(itemLi(q, true)));
+    body.appendChild(card);
+  });
+}
+
+// ---- イベント ----
+$("smartBtn").onclick = () => startQuiz(smartDeck());
+$("weakBtn").onclick = () => startQuiz(shuffle(QUESTIONS.filter(isWeak)));
+$("allBtn").onclick = () => startQuiz(shuffle(QUESTIONS.slice()));
+$("sheetBtn").onclick = () => { renderSheet(); show("sheet"); };
+$("sheetBack").onclick = renderHome;
+$("sheetWeak").onchange = renderSheet;
+document.querySelectorAll(".choice").forEach(b => b.onclick = () => answer(b.dataset.a === "1"));
+$("nextBtn").onclick = next;
+$("quitBtn").onclick = renderHome;
+$("homeBtn").onclick = renderHome;
+$("retryMissBtn").onclick = () => startQuiz(shuffle(wrongs.slice()));
+// リセットは2回押しで確定（確認ダイアログが使えない環境でも動くように画面内で確認する）
+let resetArmed = false;
+$("resetBtn").onclick = () => {
+  if (!resetArmed) {
+    resetArmed = true;
+    $("resetBtn").textContent = "もう一度押すと、正答率・苦手の記録をすべて消去します";
+    setTimeout(() => { resetArmed = false; $("resetBtn").textContent = "学習記録をリセット"; }, 5000);
+    return;
+  }
+  resetArmed = false;
+  rec = {}; saveRec();
+  $("resetBtn").textContent = "学習記録をリセットしました";
+  renderHome();
+};
+
+// キーボード操作：1=○ 2=× Enter=次へ
+document.addEventListener("keydown", e => {
+  if ($("quiz").classList.contains("hidden")) return;
+  if (!answered && (e.key === "1" || e.key === "2")) answer(e.key === "1");
+  else if (answered && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); next(); }
+});
+
+renderHome();
+
+// オフラインで使えるようにする（ネット上に公開したときだけ動く）
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
+</script>
+</body>
+</html>
