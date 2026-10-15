@@ -12,11 +12,12 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <style>
+  /* レイアウト：1カラムのカード。ホームは「現状（得点力・定着）→ 行動（モード）→ 分野」の順に並べる */
   :root {
     --bg: #f6f7fb; --card: #ffffff; --text: #1f2430; --sub: #6b7280; --line: #e5e7eb;
     --main: #0f766e; --mainbg: #e6f4f2; --onmain: #ffffff;
     --ok: #16a34a; --okbg: #e7f8ee; --ng: #dc2626; --ngbg: #fdecec;
-    --warn: #d97706; --final: #9f1239; --finalbg: #fff1f2;
+    --warn: #d97706; --warnbg: #fef6e7; --final: #9f1239; --finalbg: #fff1f2;
   }
   /* ダークモード（端末の設定に従う／表示側で明示的に切り替えた場合も反映） */
   @media (prefers-color-scheme: dark) {
@@ -24,7 +25,7 @@
       --bg: #12141a; --card: #1c1f27; --text: #e8eaf0; --sub: #9aa1ad; --line: #2c3040;
       --main: #2dd4bf; --mainbg: #143330; --onmain: #0b2b28;
       --ok: #4ade80; --okbg: #163323; --ng: #f87171; --ngbg: #3a1a1a;
-    --warn: #fbbf24; --final: #fda4af; --finalbg: #3b1220;
+      --warn: #fbbf24; --warnbg: #3a2c10; --final: #fda4af; --finalbg: #3b1220;
       color-scheme: dark;
     }
   }
@@ -32,7 +33,7 @@
     --bg: #12141a; --card: #1c1f27; --text: #e8eaf0; --sub: #9aa1ad; --line: #2c3040;
     --main: #2dd4bf; --mainbg: #143330; --onmain: #0b2b28;
     --ok: #4ade80; --okbg: #163323; --ng: #f87171; --ngbg: #3a1a1a;
-    --warn: #fbbf24; --final: #fda4af; --finalbg: #3b1220;
+    --warn: #fbbf24; --warnbg: #3a2c10; --final: #fda4af; --finalbg: #3b1220;
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
@@ -46,36 +47,79 @@
     padding: calc(20px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right))
              calc(40px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
   }
-  button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-  h1 { font-size: 1.5rem; margin: 8px 0 4px; }
+  button, select { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible { outline: 3px solid var(--main); outline-offset: 2px; }
+  h1 { font-size: 1.5rem; margin: 8px 0 4px; text-wrap: balance; }
   h2 { font-size: 1.05rem; margin: 0 0 10px; }
   .lead { color: var(--sub); margin: 0 0 16px; font-size: .95rem; }
+  .note { color: var(--sub); font-size: .88rem; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
   .hidden { display: none !important; }
   button { font: inherit; cursor: pointer; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--text); padding: 12px 14px; }
   button:disabled { cursor: default; opacity: .5; }
+  select { font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; }
   .menu { display: grid; gap: 10px; }
   .menu button { text-align: left; font-weight: 600; }
   .menu button small { display: block; font-weight: 400; color: var(--sub); }
   .menu button.primary { background: var(--main); color: var(--onmain); border-color: var(--main); }
   .menu button.primary small { color: var(--onmain); opacity: .85; }
+  .menu button.final { background: var(--finalbg); color: var(--final); border: 2px solid var(--final); }
+  .menu button.final small { color: var(--final); opacity: .85; }
+  .menu .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-  .summary { display: flex; gap: 10px; text-align: center; }
-  .summary > div { flex: 1; }
-  .summary b { display: block; font-size: 1.5rem; }
-  .summary span { color: var(--sub); font-size: .8rem; }
+  /* 得点力の目安 */
+  .gauge { display: flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums; }
+  .gauge b { font-size: 2.2rem; line-height: 1.1; }
+  .gauge span { color: var(--sub); }
+  .gbar { height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 6px; }
+  .gbar > div { height: 100%; background: var(--main); }
+  .summary { display: flex; gap: 10px; text-align: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .summary > div { flex: 1; min-width: 0; }
+  .summary b { display: block; font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+  .summary span { color: var(--sub); font-size: .78rem; }
 
+  /* 記憶定着 */
+  .stack { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--line); margin: 4px 0 8px; }
+  .stack > div { height: 100%; }
+  .s-fix { background: var(--ok); } .s-wob { background: var(--warn); } .s-bad { background: var(--ng); } .s-new { background: var(--line); }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .82rem; color: var(--sub); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+  .legend b { color: var(--text); font-variant-numeric: tabular-nums; }
+
+  /* 論点ランキング */
+  ol.rank { list-style: none; padding: 0; margin: 0; counter-reset: rk; }
+  ol.rank > li { counter-increment: rk; display: grid; grid-template-columns: 1.8em 1fr auto; gap: 2px 8px; padding: 10px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+  ol.rank > li:last-child { border-bottom: none; }
+  ol.rank > li::before { content: counter(rk); font-weight: 800; color: var(--sub); font-variant-numeric: tabular-nums; }
+  ol.rank .tn { font-weight: 700; min-width: 0; }
+  ol.rank .tn small { font-weight: 400; color: var(--sub); margin-left: 6px; }
+  ol.rank .sc { font-weight: 800; color: var(--ng); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  ol.rank .sc small { font-weight: 400; font-size: .75rem; }
+  ol.rank .why { grid-column: 2 / -1; color: var(--sub); font-size: .82rem; }
+  ol.rank .lbar { grid-column: 2 / -1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  ol.rank .lbar > div { height: 100%; background: var(--ng); }
+  ol.rank .acts { grid-column: 2 / -1; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  ol.rank details { grid-column: 2 / -1; font-size: .88rem; }
+  ol.rank details summary { color: var(--main); padding: 2px 0; }
+  .pill { display: inline-block; font-size: .72rem; font-weight: 700; padding: 0 7px; border-radius: 999px; margin-left: 4px; vertical-align: 1px; }
+  .pill.ng { background: var(--ngbg); color: var(--ng); }
+  .pill.warn { background: var(--warnbg); color: var(--warn); }
+  .linkbtn { background: none; border: none; color: var(--main); padding: 6px 0; font-weight: 600; }
+
+  /* 分野 */
   .fields { display: grid; gap: 8px; }
   .field { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 10px; text-align: left; }
   .field .name { font-weight: 700; }
-  .field .stat { color: var(--sub); font-size: .85rem; }
-  .meter { grid-column: 1 / -1; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
-  .meter > div { height: 100%; background: var(--main); }
+  .field .stat { color: var(--sub); font-size: .85rem; font-variant-numeric: tabular-nums; }
+  .meter { grid-column: 1 / -1; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; display: flex; }
+  .meter > div { height: 100%; }
 
-  .bar { display: flex; justify-content: space-between; align-items: center; color: var(--sub); font-size: .9rem; margin-bottom: 8px; }
+  /* 出題 */
+  .bar { display: flex; justify-content: space-between; align-items: center; color: var(--sub); font-size: .9rem; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
   .progress { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin-bottom: 14px; }
   .progress > div { height: 100%; background: var(--main); width: 0; transition: width .2s; }
   .tag { display: inline-block; font-size: .78rem; padding: 2px 8px; border-radius: 999px; background: var(--mainbg); color: var(--main); margin: 0 4px 8px 0; }
+  .tag.hist { background: var(--ngbg); color: var(--ng); }
   .q { font-size: 1.08rem; font-weight: 600; min-height: 5em; }
   .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
   .choice { padding: 14px 8px; font-size: 1.6rem; font-weight: 800; border-width: 2px; }
@@ -83,61 +127,55 @@
   .choice.o { color: var(--ok); border-color: var(--ok); }
   .choice.x { color: var(--ng); border-color: var(--ng); }
   .choice.dim { opacity: .3; }
-
   .result { margin-top: 14px; padding: 14px; border-radius: 12px; }
   .result.ok { background: var(--okbg); }
   .result.ng { background: var(--ngbg); }
+  .result.unsure { background: var(--warnbg); }
   .result .head { font-weight: 800; font-size: 1.1rem; }
   .result.ok .head { color: var(--ok); }
   .result.ng .head { color: var(--ng); }
+  .result.unsure .head { color: var(--warn); }
   .result p { margin: 6px 0 0; }
   .basis { color: var(--sub); font-size: .85rem; }
+  .luck { margin-top: 10px; width: 100%; font-size: .88rem; color: var(--warn); border-color: var(--warn); background: transparent; padding: 8px 12px; }
   .next { width: 100%; margin-top: 12px; background: var(--text); color: var(--bg); border: none; font-weight: 700; }
 
-  .score { font-size: 2.6rem; font-weight: 800; text-align: center; margin: 4px 0; }
+  /* 結果・一覧 */
+  .score { font-size: 2.6rem; font-weight: 800; text-align: center; margin: 4px 0; font-variant-numeric: tabular-nums; }
   .center { text-align: center; color: var(--sub); }
   .row { display: flex; gap: 10px; flex-wrap: wrap; }
   .row button { flex: 1; min-width: 140px; font-weight: 600; }
   ul.list { list-style: none; padding: 0; margin: 0; }
   ul.list li { padding: 10px 0; border-bottom: 1px solid var(--line); }
   ul.list li:last-child { border-bottom: none; }
-  ul.list .note { color: var(--sub); font-size: .88rem; }
   .mark { display: inline-block; font-weight: 800; width: 1.6em; }
   .mark.o { color: var(--ok); } .mark.x { color: var(--ng); }
-  .miss { color: var(--ng); font-size: .75rem; font-weight: 700; margin-left: 4px; }
   .back { background: none; border: none; color: var(--sub); padding: 6px 0; }
   .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
   .filters button { padding: 6px 12px; font-size: .85rem; border-radius: 999px; }
   .filters button.on { background: var(--main); color: var(--onmain); border-color: var(--main); }
-  label.opt { display: flex; gap: 8px; align-items: center; font-size: .9rem; margin-bottom: 10px; }
+  label.opt { display: flex; gap: 8px; align-items: center; font-size: .9rem; margin-bottom: 10px; flex-wrap: wrap; }
   details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
-  /* 記憶定着レポート */
-  .stack { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--line); margin: 4px 0 8px; }
-  .stack > div { height: 100%; }
-  .s-fix { background: var(--ok); } .s-wob { background: var(--warn); } .s-bad { background: var(--ng); } .s-new { background: var(--line); }
-  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .82rem; color: var(--sub); }
-  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
-  .legend b { color: var(--text); font-variant-numeric: tabular-nums; }
-  ol.rank { list-style: none; padding: 0; margin: 0; counter-reset: rk; }
-  ol.rank > li { counter-increment: rk; display: grid; grid-template-columns: 2em 1fr auto; gap: 2px 8px; padding: 10px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
-  ol.rank > li:last-child { border-bottom: none; }
-  ol.rank > li::before { content: counter(rk); font-weight: 800; color: var(--sub); }
-  ol.rank .tn { font-weight: 700; min-width: 0; }
-  ol.rank .tn small { font-weight: 400; color: var(--sub); margin-left: 6px; }
-  ol.rank .sc { font-weight: 800; color: var(--ng); font-variant-numeric: tabular-nums; }
-  ol.rank .why { grid-column: 2 / -1; color: var(--sub); font-size: .82rem; }
-  ol.rank details { grid-column: 2 / -1; font-size: .88rem; }
-  ol.rank details summary { font-weight: 400; color: var(--main); padding: 2px 0; }
-  .cnt { display: inline-block; font-size: .72rem; font-weight: 700; padding: 0 6px; border-radius: 999px; background: var(--ngbg); color: var(--ng); margin-left: 4px; }
-  .linkbtn { background: none; border: none; color: var(--main); padding: 6px 0; font-weight: 600; }
-  /* 最終決戦 */
-  .menu button.final { background: var(--finalbg); color: var(--final); border: 2px solid var(--final); }
-  .menu button.final small { color: var(--final); opacity: .85; }
+
+  /* 数字まとめ */
+  dl.nums { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr); }
+  dl.nums > div { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  dl.nums > div:last-child { border-bottom: none; }
+  dl.nums dt { font-size: .88rem; color: var(--sub); }
+  dl.nums dd { margin: 2px 0 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+  dl.nums dd small { display: block; font-weight: 400; font-size: .78rem; color: var(--sub); }
+  dl.nums.masked dd .v { background: var(--line); color: transparent; border-radius: 4px; cursor: pointer; user-select: none; }
+  dl.nums.masked dd.open .v { background: none; color: var(--text); }
+
+  /* 最終決戦・引っ越し */
   textarea.prompt { width: 100%; min-height: 16em; font: .85rem/1.5 ui-monospace, "BIZ UDGothic", monospace; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px; resize: vertical; }
-  .copied { color: var(--ok); font-weight: 700; min-height: 1.5em; margin-top: 6px; }
+  textarea.small { min-height: 6em; }
+  .msg { font-weight: 700; min-height: 1.5em; margin-top: 6px; }
+  .msg.ok { color: var(--ok); } .msg.ng { color: var(--ng); }
   ol.steps { padding-left: 1.3em; margin: 0; font-size: .92rem; }
   .foot { color: var(--sub); font-size: .8rem; margin-top: 18px; }
-  .foot a { color: var(--main); }
+  .foot a, .note a { color: var(--main); }
+  @media (prefers-reduced-motion: reduce) { .progress > div { transition: none; } }
 </style>
 </head>
 <body>
@@ -146,29 +184,46 @@
   <!-- ホーム -->
   <section id="home">
     <h1>宅建 直前総復習</h1>
-    <p class="lead">全分野の頻出論点を○×で総ざらい。まちがえた回数を記録し、記憶が定着していない論点を見つけます。</p>
+    <p class="lead">全分野の頻出論点を○×で総ざらい。まちがえ方から記憶の定着度を測り、点につながる論点から復習します。</p>
 
-    <div class="card summary">
-      <div><b id="sumDone">0</b><span>解いた問題</span></div>
-      <div><b id="sumRate">-</b><span>正答率</span></div>
-      <div><b id="sumWeak">0</b><span>要復習</span></div>
+    <div class="card">
+      <h2>得点力の目安</h2>
+      <div class="gauge"><b id="estScore">-</b><span id="estMax"></span></div>
+      <div class="gbar"><div id="estBar"></div></div>
+      <p class="note" id="estNote"></p>
+      <div class="summary">
+        <div><b id="sumDone">0</b><span>解いた問題</span></div>
+        <div><b id="sumRate">-</b><span>直近の正答率</span></div>
+        <div><b id="sumWeak">0</b><span>要復習</span></div>
+      </div>
     </div>
 
-    <div class="card" id="retainCard">
-      <h2>記憶定着レポート</h2>
+    <div class="card">
+      <h2>記憶定着</h2>
       <div class="stack" id="stackBar"></div>
       <div class="legend" id="legend"></div>
+      <p class="note" style="margin:8px 0 0">定着＝一度もまちがえていない、又は日を変えて2回続けて正解した問題。</p>
+    </div>
+
+    <div class="card">
+      <h2>期待失点の大きい論点</h2>
       <div id="topRank"></div>
-      <button class="linkbtn" id="reportBtn">苦手論点ランキングをすべて見る →</button>
+      <button class="linkbtn" id="focusBtn2">全論点の優先順位を見る →</button>
     </div>
 
     <div class="card">
       <div class="menu">
-        <button class="final" id="finalBtn">最終決戦<small id="finalSub">苦手論点の解説をClaudeに頼むプロンプトを作成</small></button>
-        <button class="primary" id="smartBtn">今日の総復習 20問<small>要復習 → あやふや → 未回答 → 定着 の順に優先して出題</small></button>
-        <button id="weakBtn">要復習だけ解く<small id="weakSub"></small></button>
-        <button id="allBtn">全問をシャッフル<small id="allSub"></small></button>
-        <button id="sheetBtn">要点チェックシート<small>答えと解説を一覧で確認（試験前の見直しに）</small></button>
+        <button class="primary" id="focusBtn">頻出論点 集中チェック<small>本試験の出題数 × あなたの誤答率が大きい論点から20問</small></button>
+        <button id="smartBtn">今日の総復習 20問<small>要復習 → あやふや → 未回答 → 定着（古い順）で出題</small></button>
+        <button class="final" id="finalBtn">最終決戦<small id="finalSub"></small></button>
+        <div class="pair">
+          <button id="weakBtn">要復習だけ<small id="weakSub"></small></button>
+          <button id="allBtn">全問シャッフル<small id="allSub"></small></button>
+        </div>
+        <div class="pair">
+          <button id="numsBtn">数字まとめ<small>期間・面積・金額</small></button>
+          <button id="sheetBtn">要点チェック<small>答えと解説の一覧</small></button>
+        </div>
       </div>
     </div>
 
@@ -182,11 +237,26 @@
       <ul class="note" style="padding-left:1.2em;margin:6px 0">
         <li>問題はすべてオリジナルです。令和5〜7年度の本試験で繰り返し出題されている論点を選んで作成しました（過去問の文章は使っていません）。</li>
         <li id="lawAsOf"></li>
+        <li>「得点力の目安」「期待失点」は、○×の正答率と、本試験での論点ごとの出題数（令和5〜7年度からの概算）から計算した参考値です。4択の本試験の点数とは一致しません。</li>
         <li>内容は見直しを行っていますが、誤りが残っている可能性があります。各問の根拠条文で確認してください。</li>
-        <li>学習記録（誤答回数など）はこの端末の中だけに保存されます。</li>
+        <li>学習記録はこの端末の中だけに保存されます。</li>
         <li>本物の過去問は <a href="https://www.retio.or.jp/exam/past_ques_ans/other/" target="_blank" rel="noopener">不動産適正取引推進機構（RETIO）の公式ページ</a> で公開されています。</li>
       </ul>
-      <button id="resetBtn" style="margin-top:6px;font-size:.85rem">学習記録をリセット</button>
+    </details>
+
+    <details class="card">
+      <summary>学習記録の引っ越し・リセット</summary>
+      <p class="note">別の端末や、Artifact版⇔GitHub版の間で記録を移せます。移す元で「記録をコピー」し、移す先で貼り付けて「読み込む」を押してください（移す先の記録は置き換わります）。</p>
+      <div class="row">
+        <button id="exportBtn">記録をコピー</button>
+      </div>
+      <label class="opt" for="importText" style="margin-top:12px">コピーした記録を貼り付け</label>
+      <textarea class="prompt small" id="importText" placeholder='{"app":"takken-mogi",...}'></textarea>
+      <div class="row" style="margin-top:8px">
+        <button id="importBtn">読み込む</button>
+        <button id="resetBtn">学習記録をリセット</button>
+      </div>
+      <div class="msg" id="dataMsg" aria-live="polite"></div>
     </details>
   </section>
 
@@ -195,13 +265,13 @@
     <div class="bar"><button class="back" id="quitBtn">← やめる</button><span id="counter"></span></div>
     <div class="progress"><div id="prog"></div></div>
     <div class="card">
-      <span class="tag" id="qfield"></span><span class="tag" id="qtopic"></span>
+      <span class="tag" id="qfield"></span><span class="tag" id="qtopic"></span><span class="tag hist hidden" id="qhist"></span>
       <div class="q" id="qtext"></div>
       <div class="choices">
         <button class="choice o" data-a="1">○<small>正しい（1）</small></button>
         <button class="choice x" data-a="0">×<small>誤り（2）</small></button>
       </div>
-      <div id="result" class="result hidden"></div>
+      <div id="result" class="result hidden" aria-live="polite"></div>
       <button class="next hidden" id="nextBtn">次へ</button>
     </div>
   </section>
@@ -209,7 +279,7 @@
   <!-- 結果 -->
   <section id="end" class="hidden">
     <div class="card">
-      <div class="center">結果</div>
+      <div class="center" id="endTitle">結果</div>
       <div class="score" id="score"></div>
       <div class="center" id="scoreSub"></div>
     </div>
@@ -221,49 +291,66 @@
       <button id="retryMissBtn">まちがえた問題をもう一度</button>
       <button id="homeBtn">ホームに戻る</button>
     </div>
+    <p class="note" id="retryNote" style="margin-top:10px">すぐに解き直して正解しても「あやふや」のままです。日を変えてもう一度正解すると「定着」になります。</p>
   </section>
 
-  <!-- 要点チェックシート -->
-  <section id="sheet" class="hidden">
-    <button class="back" id="sheetBack">← 戻る</button>
-    <h1>要点チェックシート</h1>
-    <div class="filters" id="sheetFilters"></div>
-    <label class="opt"><input type="checkbox" id="sheetWeak"> 要復習の問題だけ表示</label>
-    <div id="sheetBody"></div>
-  </section>
-
-  <!-- 苦手論点ランキング -->
-  <section id="report" class="hidden">
-    <button class="back" id="reportBack">← 戻る</button>
-    <h1>苦手論点ランキング</h1>
-    <p class="lead">苦手度 ＝ 誤答回数 ＋ 忘れ戻り回数×2 ＋ 要復習の問題数×2。<br>「忘れ戻り」は、一度正解した問題を次にまちがえた回数で、覚えたことが定着していないサインです。</p>
-    <div class="card"><ol class="rank" id="rankAll"></ol></div>
+  <!-- 頻出論点 集中チェック（論点の優先順位） -->
+  <section id="focus" class="hidden">
+    <button class="back" id="focusBack">← 戻る</button>
+    <h1>頻出論点 集中チェック</h1>
+    <p class="lead">期待失点 ＝ 本試験での年間出題数 × 推定誤答率。<br>本試験で何点失いそうかの目安です。大きい論点ほど、復習すると点が伸びます。</p>
+    <div class="card">
+      <div class="menu"><button class="primary" id="focusStart">上位5論点から20問を解く<small id="focusStartSub"></small></button></div>
+    </div>
+    <div class="card">
+      <label class="opt"><input type="checkbox" id="focusMissOnly"> まちがえたことがある論点だけ表示</label>
+      <ol class="rank" id="rankAll"></ol>
+    </div>
+    <p class="note">推定誤答率は、各問題の直近10回までの回答から計算します。回答が少ない論点は50%に近い値になります。年間出題数は令和5〜7年度の本試験からの概算です。</p>
   </section>
 
   <!-- 最終決戦 -->
   <section id="final" class="hidden">
     <button class="back" id="finalBack">← 戻る</button>
     <h1>最終決戦</h1>
-    <p class="lead">苦手度の高い論点について、Claude に解説してもらうためのプロンプトです。</p>
+    <p class="lead">まちがえたことがある論点のうち、期待失点の大きいものについて Claude に解説してもらうプロンプトです。</p>
     <div class="card">
       <h2>使い方</h2>
       <ol class="steps">
         <li>「コピー」を押す</li>
         <li>claude.ai で新しいチャットを開いて貼り付け、送信する</li>
-        <li>解説を読んだら、下の「苦手論点の問題を解く」で確認する</li>
+        <li>解説を読んだら「この論点の問題を解く」で確認する</li>
       </ol>
     </div>
     <div class="card">
-      <label class="opt" for="finalCount">対象にする論点の数
+      <label class="opt" for="finalCount">対象にする論点
         <select id="finalCount"><option value="3">上位3つ</option><option value="5" selected>上位5つ</option><option value="8">上位8つ</option></select>
       </label>
       <textarea class="prompt" id="promptText" readonly></textarea>
       <div class="row" style="margin-top:10px">
         <button id="copyBtn">コピー</button>
-        <button id="finalDrillBtn">苦手論点の問題を解く</button>
+        <button id="finalDrillBtn">この論点の問題を解く</button>
       </div>
-      <div class="copied" id="copyMsg" aria-live="polite"></div>
+      <div class="msg ok" id="copyMsg" aria-live="polite"></div>
     </div>
+  </section>
+
+  <!-- 数字まとめ -->
+  <section id="nums" class="hidden">
+    <button class="back" id="numsBack">← 戻る</button>
+    <h1>数字まとめ</h1>
+    <div class="filters" id="numsFilters"></div>
+    <label class="opt"><input type="checkbox" id="numsMask"> 数字を隠して暗記チェック（タップで表示）</label>
+    <div class="card"><dl class="nums" id="numsList"></dl></div>
+  </section>
+
+  <!-- 要点チェックシート -->
+  <section id="sheet" class="hidden">
+    <button class="back" id="sheetBack">← 戻る</button>
+    <h1>要点チェック</h1>
+    <div class="filters" id="sheetFilters"></div>
+    <label class="opt"><input type="checkbox" id="sheetWeak"> 要復習の問題だけ表示</label>
+    <div id="sheetBody"></div>
   </section>
 
   <p class="foot">オリジナル問題による学習用アプリです。本試験の問題・解答とは関係ありません。</p>
@@ -273,55 +360,79 @@
 <script>
 const FIELDS = ["権利関係", "法令上の制限", "税・価格", "宅建業法", "5問免除"];
 const $ = id => document.getElementById(id);
+const keyOf = q => q.f + "／" + q.t;
+const pct = x => Math.round(x * 100) + "%";
+const fmt1 = x => (Math.round(x * 10) / 10).toFixed(1);
 
-// ---- 学習記録（端末内に保存。保存できない環境でも動くようにする） ----
-// { 問題id: { c: 正解回数, w: 誤答回数, last: 直近が正解なら1・不正解なら0,
-//             h: 直近10回の結果（"1"=正解 "0"=不正解。古い順）, f: 忘れ戻り回数（正解の次にまちがえた回数） } }
-// 1周目（h・f がない記録）もそのまま使えるように、読み込み時に補う
+// ============================================================
+// 学習記録（端末内に保存。保存できない環境でも動くようにする）
+// { 問題id: {
+//     c: 正解回数, w: 誤答回数（まぐれ申告を含む）, u: まぐれ申告の回数,
+//     last: 直近が正解なら1・不正解なら0,
+//     h: 直近10回の結果（"1"=正解 "0"=不正解。古い順）,
+//     f: 忘れ戻り回数（前回正解していたのにまちがえた回数）,
+//     ds: 日を変えて続けて正解した日数（まちがえると0）, lcd: 最後に正解した日, ld: 最後に解いた日 } }
+// 以前の版の記録（u・ds などがない）も読めるように、読み込み時に補う
+// ============================================================
 const STORE_KEY = "takkenmogi_v1";
+function today() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function normalize(x) {
+  if (typeof x.c !== "number") x.c = 0;
+  if (typeof x.w !== "number") x.w = 0;
+  if (typeof x.h !== "string") x.h = x.last === 1 ? "1" : x.last === 0 ? "0" : "";
+  if (typeof x.f !== "number") x.f = 0;
+  if (typeof x.u !== "number") x.u = 0;
+  // 以前の版には日付がないので、直近が正解なら「1日分の正解」として扱う
+  if (typeof x.ds !== "number") x.ds = x.last === 1 ? 1 : 0;
+  if (!("lcd" in x)) x.lcd = null;
+  if (!("ld" in x)) x.ld = null;
+  return x;
+}
 function loadRec() {
   let r = {};
   try { r = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch {}
-  Object.values(r).forEach(x => {
-    if (typeof x.h !== "string") x.h = x.last === 1 ? "1" : x.last === 0 ? "0" : "";
-    if (typeof x.f !== "number") x.f = 0;
-  });
+  Object.values(r).forEach(normalize);
   return r;
 }
 function saveRec() { try { localStorage.setItem(STORE_KEY, JSON.stringify(rec)); } catch {} }
 let rec = loadRec();
-const isWeak = q => rec[q.id] && rec[q.id].last === 0;
-const isDone = q => !!rec[q.id];
 
-// ---- 記憶定着の判定 ----
-// 定着   : 直近が正解で、一度もまちがえていない or 2回以上連続で正解
-// あやふや: 直近は正解だが、過去にまちがえていて連続正解がまだ1回
-// 要復習 : 直近がまちがい
-// 未回答 : まだ解いていない
-function streak(r) { const m = r.h.match(/1*$/); return m ? m[0].length : 0; }
+// 1回分の結果を記録に反映する（元の記録は変えずに新しい記録を返す）
+function applyResult(prev, ok, unsure) {
+  const r = normalize(prev ? { ...prev } : { c: 0, w: 0, last: null });
+  const d = today();
+  if (ok) {
+    r.c++;
+    if (r.lcd !== d) { r.ds++; r.lcd = d; }
+  } else {
+    r.w++;
+    if (r.last === 1) r.f++; // 前回は正解していたのにまちがえた ＝ 忘れ戻り
+    if (unsure) r.u++;
+    r.ds = 0; r.lcd = null;
+  }
+  r.last = ok ? 1 : 0;
+  r.h = (r.h + (ok ? "1" : "0")).slice(-10);
+  r.ld = d;
+  return r;
+}
+
+// ============================================================
+// 記憶定着の判定
+//   定着   : 直近が正解で、一度もまちがえていない or 日を変えて2日以上続けて正解
+//   あやふや: 直近は正解だが、まだ日を変えての確認ができていない
+//   要復習 : 直近がまちがい（まぐれ申告を含む）
+//   未回答 : まだ解いていない
+// ============================================================
+const isDone = q => !!rec[q.id];
+const isWeak = q => isDone(q) && rec[q.id].last === 0;
 function status(q) {
   const r = rec[q.id];
   if (!r) return "new";
   if (r.last === 0) return "bad";
-  return r.w === 0 || streak(r) >= 2 ? "fix" : "wob";
-}
-// 1問ごとの苦手度：誤答回数 ＋ 忘れ戻り×2 ＋（いま要復習なら）2
-function qScore(q) {
-  const r = rec[q.id];
-  return r ? r.w + r.f * 2 + (r.last === 0 ? 2 : 0) : 0;
-}
-// 論点ごとに集計して、苦手度の高い順に並べる
-function topicRanking() {
-  const map = new Map();
-  QUESTIONS.forEach(q => {
-    const k = q.f + "／" + q.t;
-    if (!map.has(k)) map.set(k, { f: q.f, t: q.t, qs: [], score: 0, w: 0, fg: 0, bad: 0 });
-    const g = map.get(k), r = rec[q.id];
-    g.qs.push(q);
-    g.score += qScore(q);
-    if (r) { g.w += r.w; g.fg += r.f; if (r.last === 0) g.bad++; }
-  });
-  return [...map.values()].filter(g => g.score > 0).sort((a, b) => b.score - a.score || b.bad - a.bad);
+  return r.w === 0 || r.ds >= 2 ? "fix" : "wob";
 }
 const STATUS = [
   { k: "fix", label: "定着", cls: "s-fix" },
@@ -329,110 +440,206 @@ const STATUS = [
   { k: "bad", label: "要復習", cls: "s-bad" },
   { k: "new", label: "未回答", cls: "s-new" },
 ];
+// 1問ごとの復習の優先度：誤答回数 ＋ 忘れ戻り×2 ＋（いま要復習なら）2
+function qScore(q) {
+  const r = rec[q.id];
+  return r ? r.w + r.f * 2 + (r.last === 0 ? 2 : 0) : 0;
+}
 
+// ============================================================
+// 論点ごとの集計
+//   推定誤答率 ＝（直近の不正解数 ＋ 1）÷（直近の回答数 ＋ 2）
+//     → 回答がない論点は50%、回答が増えるほど実際の誤答率に近づく
+//   期待失点   ＝ 年間出題数 × 推定誤答率
+// ============================================================
+function topicStats() {
+  const map = new Map();
+  QUESTIONS.forEach(q => {
+    const k = keyOf(q);
+    if (!map.has(k)) map.set(k, { k, f: q.f, t: q.t, qs: [], freq: EXAM_FREQ[k] || 0, hz: 0, hn: 0, w: 0, fg: 0, u: 0, bad: 0 });
+    const g = map.get(k), r = rec[q.id];
+    g.qs.push(q);
+    if (r) {
+      g.hn += r.h.length; g.hz += (r.h.match(/0/g) || []).length;
+      g.w += r.w; g.fg += r.f; g.u += r.u;
+      if (r.last === 0) g.bad++;
+    }
+  });
+  return [...map.values()].map(g => {
+    g.err = (g.hz + 1) / (g.hn + 2);
+    g.loss = g.freq * g.err;
+    return g;
+  }).sort((a, b) => b.loss - a.loss || b.bad - a.bad);
+}
+// 最終決戦の対象：まちがえたことがある論点を、期待失点の大きい順に
+const missedTopics = () => topicStats().filter(g => g.w > 0);
+
+// ============================================================
+// 出題の並べ方
+// ============================================================
 function shuffle(a) {
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
   return a;
 }
+// 同じ論点の問題が続かないように並べ替える（前の問題の解説が次のヒントにならないように）
+function spread(list) {
+  const pool = list.slice(), out = [];
+  while (pool.length) {
+    const prev = out.length ? keyOf(out[out.length - 1]) : null;
+    let i = pool.findIndex(q => keyOf(q) !== prev);
+    if (i < 0) i = 0;
+    out.push(pool.splice(i, 1)[0]);
+  }
+  return out;
+}
+// 論点の中で優先する順：要復習（優先度の高い順）→ あやふや → 未回答 → 定着（解いた日が古い順）
+function byPriority(qs) {
+  const pick = k => shuffle(qs.filter(q => status(q) === k));
+  const bad = pick("bad").sort((a, b) => qScore(b) - qScore(a));
+  const fix = pick("fix").sort((a, b) => (rec[a.id].ld || "").localeCompare(rec[b.id].ld || ""));
+  return [...bad, ...pick("wob"), ...pick("new"), ...fix];
+}
+// 今日の総復習
+const smartDeck = (n = 20) => spread(byPriority(QUESTIONS).slice(0, n));
+// 集中チェック：期待失点の上位5論点から、失点の大きさに応じて20問を配分（各論点2問以上）
+function focusDeck(topN = 5, n = 20) {
+  const top = topicStats().slice(0, topN);
+  const total = top.reduce((s, g) => s + g.loss, 0);
+  let quota = top.map(g => Math.max(2, Math.round(n * g.loss / total)));
+  const picked = [];
+  top.forEach((g, i) => picked.push(...byPriority(g.qs).slice(0, quota[i])));
+  // 問題数が足りない論点があれば、残りを上位論点から補う
+  if (picked.length < n) {
+    const rest = byPriority(top.flatMap(g => g.qs)).filter(q => !picked.includes(q));
+    picked.push(...rest.slice(0, n - picked.length));
+  }
+  return spread(picked.slice(0, n));
+}
+
+// ============================================================
+// 画面
+// ============================================================
 function show(id) {
-  ["home", "quiz", "end", "sheet", "report", "final"].forEach(s => $(s).classList.toggle("hidden", s !== id));
+  ["home", "quiz", "end", "focus", "final", "nums", "sheet"].forEach(s => $(s).classList.toggle("hidden", s !== id));
   window.scrollTo(0, 0);
 }
 
 // ---- ホーム ----
-function stats(qs) {
-  let c = 0, t = 0;
-  qs.forEach(q => { const r = rec[q.id]; if (r) { c += r.c; t += r.c + r.w; } });
-  return { done: qs.filter(isDone).length, rate: t ? Math.round(c / t * 100) : null, weak: qs.filter(isWeak).length };
-}
 function renderHome() {
-  const s = stats(QUESTIONS);
-  $("sumDone").textContent = `${s.done}/${QUESTIONS.length}`;
-  $("sumRate").textContent = s.rate === null ? "-" : s.rate + "%";
-  $("sumWeak").textContent = s.weak;
-  $("weakSub").textContent = s.weak ? `${s.weak}問` : "まだありません";
-  $("weakBtn").disabled = !s.weak;
+  const ts = topicStats();
+  // 得点力の目安
+  const max = ts.reduce((s, g) => s + g.freq, 0);
+  const est = ts.reduce((s, g) => s + g.freq * (1 - g.err), 0);
+  const answers = Object.values(rec).reduce((s, r) => s + r.h.length, 0);
+  $("estScore").textContent = fmt1(est);
+  $("estMax").textContent = `／ ${fmt1(max)}点（統計を除く）`;
+  $("estBar").style.width = (est / max * 100) + "%";
+  $("estNote").textContent = answers < 60
+    ? `回答がまだ少ないため、未回答の論点は正答率50%として計算しています（回答 ${answers}回）。`
+    : "○×の直近の正答率 × 本試験の論点別出題数から計算した目安です。";
+  // 集計
+  const done = QUESTIONS.filter(isDone).length;
+  const hz = Object.values(rec).reduce((s, r) => s + (r.h.match(/0/g) || []).length, 0);
+  $("sumDone").textContent = `${done}/${QUESTIONS.length}`;
+  $("sumRate").textContent = answers ? pct(1 - hz / answers) : "-";
+  const weak = QUESTIONS.filter(isWeak).length;
+  $("sumWeak").textContent = weak;
+  $("weakSub").textContent = weak ? `${weak}問` : "まだありません";
+  $("weakBtn").disabled = !weak;
   $("allSub").textContent = `全${QUESTIONS.length}問`;
   $("lawAsOf").textContent = `法令は ${LAW_AS_OF.replace(/-/g, "/")} 時点の内容にもとづいています。`;
-  $("fieldList").innerHTML = "";
-  FIELDS.forEach(f => {
-    const qs = QUESTIONS.filter(q => q.f === f);
-    const fs = stats(qs);
-    const b = document.createElement("button");
-    b.className = "field";
-    b.innerHTML = `<span class="name">${f}</span>
-      <span class="stat">${fs.done}/${qs.length}問　${fs.rate === null ? "" : "正答率" + fs.rate + "%"}${fs.weak ? "　要復習" + fs.weak : ""}</span>
-      <div class="meter"><div style="width:${fs.done / qs.length * 100}%"></div></div>`;
-    b.onclick = () => startQuiz(shuffle(qs.slice()));
-    $("fieldList").appendChild(b);
-  });
-  renderRetain();
-  show("home");
-}
-
-// 記憶定着レポート（ホームのカード）
-function renderRetain() {
+  // 記憶定着
   const cnt = { fix: 0, wob: 0, bad: 0, new: 0 };
   QUESTIONS.forEach(q => cnt[status(q)]++);
   $("stackBar").innerHTML = STATUS.map(s => `<div class="${s.cls}" style="width:${cnt[s.k] / QUESTIONS.length * 100}%"></div>`).join("");
   $("legend").innerHTML = STATUS.map(s => `<span><i class="${s.cls}"></i>${s.label} <b>${cnt[s.k]}</b></span>`).join("");
-  const rank = topicRanking();
+  // 期待失点の大きい論点（上位3）
+  const ol = document.createElement("ol");
+  ol.className = "rank";
+  const maxLoss = ts[0] ? ts[0].loss : 1;
+  ts.slice(0, 3).forEach(g => ol.appendChild(rankLi(g, maxLoss, false)));
   $("topRank").innerHTML = "";
-  if (!rank.length) {
-    $("topRank").innerHTML = '<p class="note">まちがえた問題がまだないため、苦手論点はありません。</p>';
-  } else {
-    const ol = document.createElement("ol");
-    ol.className = "rank";
-    rank.slice(0, 3).forEach(g => ol.appendChild(rankLi(g, false)));
-    $("topRank").appendChild(ol);
-  }
-  $("reportBtn").classList.toggle("hidden", !rank.length);
-  $("finalBtn").disabled = !rank.length;
-  $("finalSub").textContent = rank.length
-    ? `苦手論点${rank.length}件。解説をClaudeに頼むプロンプトを作成`
+  $("topRank").appendChild(ol);
+  // 最終決戦
+  const mt = missedTopics();
+  $("finalBtn").disabled = !mt.length;
+  $("finalSub").textContent = mt.length
+    ? `まちがえた論点${mt.length}件の解説をClaudeに頼むプロンプトを作成`
     : "まちがえた問題ができると使えます";
+  // 分野別
+  $("fieldList").innerHTML = "";
+  FIELDS.forEach(f => {
+    const qs = QUESTIONS.filter(q => q.f === f);
+    const c = { fix: 0, wob: 0, bad: 0, new: 0 };
+    qs.forEach(q => c[status(q)]++);
+    const b = document.createElement("button");
+    b.className = "field";
+    b.innerHTML = `<span class="name"></span>
+      <span class="stat">定着${c.fix}／${qs.length}問${c.bad ? "　要復習" + c.bad : ""}</span>
+      <div class="meter">${STATUS.filter(s => s.k !== "new").map(s => `<div class="${s.cls}" style="width:${c[s.k] / qs.length * 100}%"></div>`).join("")}</div>`;
+    b.querySelector(".name").textContent = f;
+    b.onclick = () => startQuiz(spread(byPriority(qs)), f);
+    $("fieldList").appendChild(b);
+  });
+  show("home");
 }
 
-// ランキングの1行
-function rankLi(g, withDetail) {
+// 論点ランキングの1行
+function rankLi(g, maxLoss, withDetail) {
   const li = document.createElement("li");
-  li.innerHTML = `<span class="tn"></span><span class="sc">${g.score}</span><span class="why"></span>`;
-  li.querySelector(".tn").textContent = g.t;
-  li.querySelector(".tn").insertAdjacentHTML("beforeend", `<small></small>`);
-  li.querySelector(".tn small").textContent = g.f;
-  li.querySelector(".why").textContent = `誤答${g.w}回・忘れ戻り${g.fg}回・要復習${g.bad}問（全${g.qs.length}問）`;
+  li.innerHTML = `<span class="tn"><span class="t"></span><small></small></span>
+    <span class="sc">${fmt1(g.loss)}<small>点</small></span>
+    <span class="why"></span>
+    <div class="lbar"><div style="width:${g.loss / maxLoss * 100}%"></div></div>`;
+  li.querySelector(".t").textContent = g.t;
+  li.querySelector("small").textContent = g.f;
+  const parts = [`年${g.freq}問 × 推定誤答率${pct(g.err)}`, g.hn ? `直近${g.hn}回` : "未回答"];
+  if (g.w) parts.push(`誤答${g.w}回`);
+  if (g.fg) parts.push(`忘れ戻り${g.fg}回`);
+  if (g.u) parts.push(`まぐれ${g.u}回`);
+  li.querySelector(".why").textContent = parts.join("・") + `（全${g.qs.length}問）`;
   if (withDetail) {
-    const d = document.createElement("details");
-    d.innerHTML = "<summary>まちがえた問題を見る</summary>";
-    const ul = document.createElement("ul");
-    ul.className = "list";
-    g.qs.filter(q => rec[q.id] && rec[q.id].w > 0)
-      .sort((a, b) => qScore(b) - qScore(a))
-      .forEach(q => ul.appendChild(itemLi(q, true)));
-    d.appendChild(ul);
-    li.appendChild(d);
+    const acts = document.createElement("div");
+    acts.className = "acts";
+    const b = document.createElement("button");
+    b.className = "linkbtn";
+    b.textContent = "この論点を解く";
+    b.onclick = () => startQuiz(spread(byPriority(g.qs)), g.t);
+    acts.appendChild(b);
+    li.appendChild(acts);
+    const missed = g.qs.filter(q => rec[q.id] && rec[q.id].w > 0).sort((a, b) => qScore(b) - qScore(a));
+    if (missed.length) {
+      const d = document.createElement("details");
+      d.innerHTML = `<summary>まちがえた問題（${missed.length}問）</summary>`;
+      const ul = document.createElement("ul");
+      ul.className = "list";
+      missed.forEach(q => ul.appendChild(itemLi(q, true)));
+      d.appendChild(ul);
+      li.appendChild(d);
+    }
   }
   return li;
 }
-function renderReport() {
-  $("rankAll").innerHTML = "";
-  topicRanking().forEach(g => $("rankAll").appendChild(rankLi(g, true)));
-  show("report");
-}
 
-// 今日の総復習：要復習（苦手度の高い順）→ あやふや → 未回答 → 定着 の順で20問
-function smartDeck(n = 20) {
-  const by = k => shuffle(QUESTIONS.filter(q => status(q) === k));
-  const bad = by("bad").sort((a, b) => qScore(b) - qScore(a));
-  return [...bad, ...by("wob"), ...by("new"), ...by("fix")].slice(0, n);
+// ---- 集中チェック ----
+function renderFocus() {
+  const ts = topicStats();
+  const top = ts.slice(0, 5);
+  $("focusStartSub").textContent = top.map(g => g.t).join("・");
+  const list = $("focusMissOnly").checked ? ts.filter(g => g.w > 0) : ts;
+  $("rankAll").innerHTML = "";
+  const maxLoss = ts[0] ? ts[0].loss : 1;
+  list.forEach(g => $("rankAll").appendChild(rankLi(g, maxLoss, true)));
+  if (!list.length) $("rankAll").innerHTML = '<li class="note" style="display:block">まちがえたことがある論点はまだありません。</li>';
+  show("focus");
 }
 
 // ---- 最終決戦：Claude に貼り付けるプロンプトを作る ----
 function buildPrompt(topics) {
   const L = [];
   L.push("あなたは宅建試験（宅地建物取引士資格試験）の講師です。");
-  L.push("私は試験直前で、○×問題の学習アプリで苦手と判定された論点を克服したいです。");
-  L.push("以下は苦手度の高い順に並べた論点と、私がまちがえた問題です。");
+  L.push("私は試験直前で、○×問題の学習アプリでまちがえた論点を克服したいです。");
+  L.push("以下は、本試験での出題数と私の誤答率から計算した「期待失点」の大きい順に並べた論点と、私がまちがえた問題です。");
   L.push("");
   L.push("# お願い");
   L.push(`- 法令は${LAW_AS_OF.replace(/-/g, "/")}時点の内容で解説してください。`);
@@ -446,15 +653,19 @@ function buildPrompt(topics) {
   L.push("- 過去の本試験問題の文章をそのまま引用しないでください。");
   topics.forEach((g, i) => {
     L.push("");
-    L.push(`# 苦手論点${i + 1}：${g.f}／${g.t}`);
-    L.push(`苦手度${g.score}（誤答${g.w}回、忘れ戻り${g.fg}回、いま要復習${g.bad}問）`);
+    L.push(`# 論点${i + 1}：${g.f}／${g.t}`);
+    const st = [`本試験での出題 年${g.freq}問程度`, `私の推定誤答率${pct(g.err)}`, `誤答${g.w}回`];
+    if (g.fg) st.push(`一度正解した後にまちがえた回数${g.fg}回`);
+    if (g.u) st.push(`正解したがまぐれだった回数${g.u}回`);
+    L.push(st.join("、"));
     g.qs.filter(q => rec[q.id] && rec[q.id].w > 0)
       .sort((a, b) => qScore(b) - qScore(a))
       .slice(0, 4)
       .forEach(q => {
         const r = rec[q.id];
         const note = [`誤答${r.w}回`];
-        if (r.f) note.push(`一度正解した後にまちがえた回数${r.f}回`);
+        if (r.f) note.push(`忘れ戻り${r.f}回`);
+        if (r.u) note.push(`まぐれ${r.u}回`);
         if (r.last === 0) note.push("直近もまちがい");
         L.push(`- 問題：${q.q}`);
         L.push(`  正解：${q.a ? "○" : "×"}（${note.join("、")}）`);
@@ -463,109 +674,54 @@ function buildPrompt(topics) {
   });
   return L.join("\n");
 }
+const finalTopics = () => missedTopics().slice(0, +$("finalCount").value);
 function renderFinal() {
-  const topics = topicRanking().slice(0, +$("finalCount").value);
-  $("promptText").value = buildPrompt(topics);
+  $("promptText").value = buildPrompt(finalTopics());
   $("copyMsg").textContent = "";
-  return topics;
+  show("final");
 }
-function finalDrill() {
-  const topics = topicRanking().slice(0, +$("finalCount").value);
-  const qs = topics.flatMap(g => g.qs);
-  startQuiz(shuffle(qs).sort((a, b) => qScore(b) - qScore(a)));
-}
-async function copyPrompt() {
-  const ta = $("promptText");
+
+// コピー（許可されない環境では全文を選択して手動コピーしてもらう）
+async function copyText(text, ta, msgEl, okMsg) {
   try {
-    await navigator.clipboard.writeText(ta.value);
-    $("copyMsg").textContent = "コピーしました。claude.ai に貼り付けてください。";
+    await navigator.clipboard.writeText(text);
+    msgEl.textContent = okMsg;
   } catch {
-    // コピーが許可されない環境では、全文を選択した状態にして手動コピーしてもらう
-    ta.focus(); ta.select();
+    if (ta) { ta.focus(); ta.select(); }
     let ok = false;
     try { ok = document.execCommand("copy"); } catch {}
-    $("copyMsg").textContent = ok
-      ? "コピーしました。claude.ai に貼り付けてください。"
-      : "全文を選択しました。長押し（またはCtrl+C）でコピーしてください。";
+    msgEl.textContent = ok ? okMsg : "全文を選択しました。長押し（又はCtrl+C）でコピーしてください。";
   }
 }
 
-// ---- 出題 ----
-let deck = [], idx = 0, correct = 0, wrongs = [], answered = false;
-
-function startQuiz(items) {
-  if (!items.length) return;
-  deck = items; idx = 0; correct = 0; wrongs = [];
-  show("quiz");
-  renderQ();
-}
-function renderQ() {
-  const q = deck[idx];
-  answered = false;
-  $("counter").textContent = `${idx + 1} / ${deck.length}　正解 ${correct}`;
-  $("prog").style.width = (idx / deck.length * 100) + "%";
-  $("qfield").textContent = q.f;
-  $("qtopic").textContent = q.t;
-  $("qtext").textContent = q.q;
-  document.querySelectorAll(".choice").forEach(b => { b.disabled = false; b.classList.remove("dim"); });
-  $("result").classList.add("hidden");
-  $("nextBtn").classList.add("hidden");
-}
-function answer(userO) {
-  if (answered) return;
-  answered = true;
-  const q = deck[idx];
-  const ok = userO === q.a;
-  const r = rec[q.id] || { c: 0, w: 0, last: null, h: "", f: 0 };
-  if (ok) { correct++; r.c++; }
-  else {
-    wrongs.push(q); r.w++;
-    if (r.last === 1) r.f++; // 前回は正解していたのにまちがえた ＝ 忘れ戻り
-  }
-  r.last = ok ? 1 : 0;
-  r.h = (r.h + (ok ? "1" : "0")).slice(-10);
-  rec[q.id] = r;
-  saveRec();
-  document.querySelectorAll(".choice").forEach(b => {
-    b.disabled = true;
-    if ((b.dataset.a === "1") !== q.a) b.classList.add("dim");
+// ---- 数字まとめ ----
+let numsField = "宅建業法";
+function renderNums() {
+  $("numsFilters").innerHTML = "";
+  FIELDS.forEach(f => {
+    const b = document.createElement("button");
+    b.textContent = f;
+    b.className = f === numsField ? "on" : "";
+    b.onclick = () => { numsField = f; renderNums(); };
+    $("numsFilters").appendChild(b);
   });
-  const box = $("result");
-  box.className = "result " + (ok ? "ok" : "ng");
-  box.innerHTML = `<div class="head">${ok ? "正解" : "不正解"}　答え：${q.a ? "○" : "×"}</div>
-    <p></p><p class="basis"></p>`;
-  box.children[1].textContent = q.e;
-  box.children[2].textContent = "根拠：" + q.b;
-  $("nextBtn").textContent = idx + 1 < deck.length ? "次へ（Enter）" : "結果を見る（Enter）";
-  $("nextBtn").classList.remove("hidden");
-  $("counter").textContent = `${idx + 1} / ${deck.length}　正解 ${correct}`;
-}
-function next() {
-  idx++;
-  if (idx < deck.length) renderQ(); else finish();
-}
-function finish() {
-  $("prog").style.width = "100%";
-  const pct = Math.round(correct / deck.length * 100);
-  $("score").textContent = `${correct} / ${deck.length}`;
-  $("scoreSub").textContent = pct === 100 ? "全問正解！" : `正答率 ${pct}%`;
-  $("missCard").classList.toggle("hidden", !wrongs.length);
-  $("retryMissBtn").classList.toggle("hidden", !wrongs.length);
-  $("missList").innerHTML = "";
-  wrongs.forEach(q => $("missList").appendChild(itemLi(q, false)));
-  show("end");
+  const dl = $("numsList");
+  dl.className = "nums" + ($("numsMask").checked ? " masked" : "");
+  dl.innerHTML = "";
+  NUMBERS.filter(x => x.f === numsField).forEach(x => {
+    const div = document.createElement("div");
+    div.innerHTML = `<dt></dt><dd><span class="v"></span><small></small></dd>`;
+    div.querySelector("dt").textContent = x.item;
+    div.querySelector(".v").textContent = x.v;
+    div.querySelector("small").textContent = x.b;
+    const dd = div.querySelector("dd");
+    dd.onclick = () => dd.classList.toggle("open");
+    dl.appendChild(div);
+  });
+  show("nums");
 }
 
-// 一覧の1行（答え・問題文・解説）
-function itemLi(q, showMiss) {
-  const li = document.createElement("li");
-  li.innerHTML = `<span class="mark ${q.a ? "o" : "x"}">${q.a ? "○" : "×"}</span><span class="qt"></span>${showMiss && isWeak(q) ? '<span class="miss">要復習</span>' : ""}${showMiss && rec[q.id] && rec[q.id].w ? `<span class="cnt">誤答${rec[q.id].w}</span>` : ""}<div class="note"></div>`;
-  li.querySelector(".qt").textContent = q.q;
-  li.querySelector(".note").textContent = `${q.e}（${q.b}）`;
-  return li;
-}
-
-// ---- 要点チェックシート ----
+// ---- 要点チェック ----
 let sheetField = FIELDS[0];
 function renderSheet() {
   $("sheetFilters").innerHTML = "";
@@ -579,9 +735,8 @@ function renderSheet() {
   const qs = QUESTIONS.filter(q => q.f === sheetField && (!$("sheetWeak").checked || isWeak(q)));
   const body = $("sheetBody");
   body.innerHTML = "";
-  if (!qs.length) { body.innerHTML = '<div class="card center">該当する問題はありません</div>'; return; }
-  const topics = [...new Set(qs.map(q => q.t))];
-  topics.forEach(t => {
+  if (!qs.length) { body.innerHTML = '<div class="card center">該当する問題はありません</div>'; }
+  [...new Set(qs.map(q => q.t))].forEach(t => {
     const card = document.createElement("div");
     card.className = "card";
     card.innerHTML = `<h2></h2><ul class="list"></ul>`;
@@ -589,47 +744,200 @@ function renderSheet() {
     qs.filter(q => q.t === t).forEach(q => card.querySelector("ul").appendChild(itemLi(q, true)));
     body.appendChild(card);
   });
+  show("sheet");
 }
 
-// ---- イベント ----
-$("smartBtn").onclick = () => startQuiz(smartDeck());
-$("weakBtn").onclick = () => startQuiz(shuffle(QUESTIONS.filter(isWeak)));
-$("allBtn").onclick = () => startQuiz(shuffle(QUESTIONS.slice()));
-$("sheetBtn").onclick = () => { renderSheet(); show("sheet"); };
-$("reportBtn").onclick = renderReport;
-$("reportBack").onclick = renderHome;
-$("finalBtn").onclick = () => { renderFinal(); show("final"); };
+// 一覧の1行（答え・問題文・解説）
+function itemLi(q, showRec) {
+  const li = document.createElement("li");
+  li.innerHTML = `<span class="mark ${q.a ? "o" : "x"}">${q.a ? "○" : "×"}</span><span class="qt"></span><span class="pills"></span><div class="note"></div>`;
+  li.querySelector(".qt").textContent = q.q;
+  li.querySelector(".note").textContent = `${q.e}（${q.b}）`;
+  const r = rec[q.id];
+  if (showRec && r) {
+    const p = [];
+    if (r.last === 0) p.push('<span class="pill ng">要復習</span>');
+    if (r.w) p.push(`<span class="pill ng">誤答${r.w}</span>`);
+    if (r.f) p.push(`<span class="pill warn">忘れ戻り${r.f}</span>`);
+    li.querySelector(".pills").innerHTML = p.join("");
+  }
+  return li;
+}
+
+// ============================================================
+// 出題
+// ============================================================
+let deck = [], idx = 0, correct = 0, wrongs = [], answered = false, deckName = "", undo = null;
+
+function startQuiz(items, name = "") {
+  if (!items.length) return;
+  deck = items; idx = 0; correct = 0; wrongs = []; deckName = name;
+  show("quiz");
+  renderQ();
+}
+function renderQ() {
+  const q = deck[idx];
+  answered = false; undo = null;
+  $("counter").textContent = `${idx + 1} / ${deck.length}　正解 ${correct}`;
+  $("prog").style.width = (idx / deck.length * 100) + "%";
+  $("qfield").textContent = q.f;
+  $("qtopic").textContent = q.t;
+  const r = rec[q.id];
+  $("qhist").classList.toggle("hidden", !(r && r.w));
+  if (r && r.w) $("qhist").textContent = `誤答${r.w}回`;
+  $("qtext").textContent = q.q;
+  document.querySelectorAll(".choice").forEach(b => { b.disabled = false; b.classList.remove("dim"); });
+  $("result").classList.add("hidden");
+  $("nextBtn").classList.add("hidden");
+}
+function answer(userO) {
+  if (answered) return;
+  answered = true;
+  const q = deck[idx];
+  const ok = userO === q.a;
+  undo = rec[q.id] ? { ...rec[q.id] } : null; // 「まぐれ」申告で記録を付け直すために、回答前の記録を取っておく
+  rec[q.id] = applyResult(undo, ok, false);
+  saveRec();
+  if (ok) correct++; else wrongs.push(q);
+  document.querySelectorAll(".choice").forEach(b => {
+    b.disabled = true;
+    if ((b.dataset.a === "1") !== q.a) b.classList.add("dim");
+  });
+  renderResult(q, ok ? "ok" : "ng");
+  $("nextBtn").textContent = idx + 1 < deck.length ? "次へ（Enter）" : "結果を見る（Enter）";
+  $("nextBtn").classList.remove("hidden");
+  $("nextBtn").focus({ preventScroll: true });
+  $("counter").textContent = `${idx + 1} / ${deck.length}　正解 ${correct}`;
+}
+function renderResult(q, kind) {
+  const box = $("result");
+  box.className = "result " + kind;
+  const head = { ok: "正解", ng: "不正解", unsure: "まぐれとして記録しました（要復習）" }[kind];
+  box.innerHTML = `<div class="head"></div><p></p><p class="basis"></p>`;
+  box.children[0].textContent = `${head}　答え：${q.a ? "○" : "×"}`;
+  box.children[1].textContent = q.e;
+  box.children[2].textContent = "根拠：" + q.b;
+  if (kind === "ok") {
+    const b = document.createElement("button");
+    b.className = "luck";
+    b.textContent = "自信がなかった・まぐれだった（3）";
+    b.onclick = markLucky;
+    box.appendChild(b);
+  }
+}
+// 正解したが自信がなかった → 不正解として記録し直す
+function markLucky() {
+  if (!answered || !$("result").classList.contains("ok")) return;
+  const q = deck[idx];
+  rec[q.id] = applyResult(undo, false, true);
+  saveRec();
+  correct--; wrongs.push(q);
+  renderResult(q, "unsure");
+  $("counter").textContent = `${idx + 1} / ${deck.length}　正解 ${correct}`;
+  $("nextBtn").focus({ preventScroll: true });
+}
+function next() {
+  idx++;
+  if (idx < deck.length) renderQ(); else finish();
+}
+function finish() {
+  $("prog").style.width = "100%";
+  $("endTitle").textContent = deckName ? `結果（${deckName}）` : "結果";
+  $("score").textContent = `${correct} / ${deck.length}`;
+  $("scoreSub").textContent = correct === deck.length ? "全問正解！" : `正答率 ${pct(correct / deck.length)}`;
+  $("missCard").classList.toggle("hidden", !wrongs.length);
+  $("retryMissBtn").classList.toggle("hidden", !wrongs.length);
+  $("retryNote").classList.toggle("hidden", !wrongs.length);
+  $("missList").innerHTML = "";
+  wrongs.forEach(q => $("missList").appendChild(itemLi(q, false)));
+  show("end");
+}
+
+// ============================================================
+// 学習記録の引っ越し・リセット
+// ============================================================
+function exportRec() {
+  const text = JSON.stringify({ app: "takken-mogi", v: 2, date: today(), rec });
+  $("importText").value = text;
+  copyText(text, $("importText"), $("dataMsg"), `記録（${Object.keys(rec).length}問分）をコピーしました。移す先で貼り付けてください。`);
+  $("dataMsg").className = "msg ok";
+}
+let importArmed = false, resetArmed = false;
+function importRec() {
+  const msg = $("dataMsg");
+  let data;
+  try { data = JSON.parse($("importText").value.trim()); } catch { data = null; }
+  const ids = new Set(QUESTIONS.map(q => q.id));
+  if (!data || data.app !== "takken-mogi" || typeof data.rec !== "object" || !data.rec) {
+    msg.className = "msg ng"; msg.textContent = "読み込めませんでした。「記録をコピー」で取得した文字列をそのまま貼り付けてください。";
+    return;
+  }
+  const entries = Object.entries(data.rec).filter(([id, r]) => ids.has(id) && r && typeof r === "object");
+  if (!importArmed) {
+    importArmed = true;
+    msg.className = "msg ng";
+    msg.textContent = `${entries.length}問分の記録で、この端末の記録を置き換えます。よければもう一度「読み込む」を押してください。`;
+    setTimeout(() => { importArmed = false; }, 8000);
+    return;
+  }
+  importArmed = false;
+  rec = Object.fromEntries(entries.map(([id, r]) => [id, normalize({ ...r })]));
+  saveRec();
+  msg.className = "msg ok"; msg.textContent = `${entries.length}問分の記録を読み込みました。`;
+  renderHome();
+}
+function resetRec() {
+  const msg = $("dataMsg");
+  if (!resetArmed) {
+    resetArmed = true;
+    msg.className = "msg ng";
+    msg.textContent = "もう一度「学習記録をリセット」を押すと、すべての記録を消去します。";
+    setTimeout(() => { resetArmed = false; }, 5000);
+    return;
+  }
+  resetArmed = false;
+  rec = {}; saveRec();
+  msg.className = "msg ok"; msg.textContent = "学習記録をリセットしました。";
+  renderHome();
+}
+
+// ============================================================
+// イベント
+// ============================================================
+$("focusBtn").onclick = renderFocus;
+$("focusBtn2").onclick = renderFocus;
+$("focusBack").onclick = renderHome;
+$("focusStart").onclick = () => startQuiz(focusDeck(), "集中チェック");
+$("focusMissOnly").onchange = renderFocus;
+$("smartBtn").onclick = () => startQuiz(smartDeck(), "今日の総復習");
+$("weakBtn").onclick = () => startQuiz(spread(byPriority(QUESTIONS.filter(isWeak))), "要復習");
+$("allBtn").onclick = () => startQuiz(spread(shuffle(QUESTIONS.slice())), "全問");
+$("finalBtn").onclick = renderFinal;
 $("finalBack").onclick = renderHome;
 $("finalCount").onchange = renderFinal;
-$("copyBtn").onclick = copyPrompt;
-$("finalDrillBtn").onclick = finalDrill;
+$("copyBtn").onclick = () => copyText($("promptText").value, $("promptText"), $("copyMsg"), "コピーしました。claude.ai に貼り付けてください。");
+$("finalDrillBtn").onclick = () => startQuiz(spread(byPriority(finalTopics().flatMap(g => g.qs))), "最終決戦");
+$("numsBtn").onclick = renderNums;
+$("numsBack").onclick = renderHome;
+$("numsMask").onchange = renderNums;
+$("sheetBtn").onclick = renderSheet;
 $("sheetBack").onclick = renderHome;
 $("sheetWeak").onchange = renderSheet;
 document.querySelectorAll(".choice").forEach(b => b.onclick = () => answer(b.dataset.a === "1"));
 $("nextBtn").onclick = next;
 $("quitBtn").onclick = renderHome;
 $("homeBtn").onclick = renderHome;
-$("retryMissBtn").onclick = () => startQuiz(shuffle(wrongs.slice()));
-// リセットは2回押しで確定（確認ダイアログが使えない環境でも動くように画面内で確認する）
-let resetArmed = false;
-$("resetBtn").onclick = () => {
-  if (!resetArmed) {
-    resetArmed = true;
-    $("resetBtn").textContent = "もう一度押すと、正答率・苦手の記録をすべて消去します";
-    setTimeout(() => { resetArmed = false; $("resetBtn").textContent = "学習記録をリセット"; }, 5000);
-    return;
-  }
-  resetArmed = false;
-  rec = {}; saveRec();
-  $("resetBtn").textContent = "学習記録をリセットしました";
-  renderHome();
-};
+$("retryMissBtn").onclick = () => startQuiz(spread(shuffle(wrongs.slice())), "解き直し");
+$("exportBtn").onclick = exportRec;
+$("importBtn").onclick = importRec;
+$("resetBtn").onclick = resetRec;
 
-// キーボード操作：1=○ 2=× Enter=次へ
+// キーボード操作：1=○ 2=× 3=まぐれ Enter=次へ
 document.addEventListener("keydown", e => {
   if ($("quiz").classList.contains("hidden")) return;
   if (!answered && (e.key === "1" || e.key === "2")) answer(e.key === "1");
-  else if (answered && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); next(); }
+  else if (answered && e.key === "3") markLucky();
+  else if (answered && (e.key === "Enter" || e.key === " ") && document.activeElement.tagName !== "BUTTON") { e.preventDefault(); next(); }
 });
 
 renderHome();

@@ -3,11 +3,13 @@
    使い方:  node scripts/check.js [過去問テキストのフォルダ]
    - 形式の不整合（ID重複・項目の抜け・○×と解説の食い違い など）
    - 過去問の文章との重複（著作権対策。フォルダを指定したときだけ）
+   - 本試験の出題数の表（EXAM_FREQ）が全論点をカバーしているか
+   - 数字まとめ（NUMBERS）の項目の抜け
    問題が見つかったら「NG」を表示して終了コード1で終わる
    ========================================================= */
 const fs = require("fs");
 const path = require("path");
-const { QUESTIONS, LAW_AS_OF } = require("../questions.js");
+const { QUESTIONS, LAW_AS_OF, EXAM_FREQ, NUMBERS } = require("../questions.js");
 
 const FIELDS = ["権利関係", "法令上の制限", "税・価格", "宅建業法", "5問免除"];
 const PREFIX = { "権利関係": "ken", "法令上の制限": "ho", "税・価格": "zei", "宅建業法": "gyo", "5問免除": "men" };
@@ -39,6 +41,25 @@ for (const q of QUESTIONS) {
   if (q.q.length > 160) warns.push(`${q.id}: 問題文が長い（${q.q.length}文字）`);
 }
 
+// ---- 1-2. 出題数の表と数字まとめ ----
+const topicKeys = new Set(QUESTIONS.map(q => q.f + "／" + q.t));
+for (const k of topicKeys) {
+  if (!(k in EXAM_FREQ)) errors.push(`EXAM_FREQ: 論点「${k}」の出題数がない`);
+}
+for (const [k, v] of Object.entries(EXAM_FREQ)) {
+  if (!topicKeys.has(k)) errors.push(`EXAM_FREQ: 「${k}」に当たる問題がない（論点名の書き間違い？）`);
+  if (typeof v !== "number" || v <= 0) errors.push(`EXAM_FREQ: 「${k}」の値が不正`);
+}
+for (const k of topicKeys) {
+  const n = QUESTIONS.filter(q => q.f + "／" + q.t === k).length;
+  // 本試験の1問あたり、少なくとも4問は用意する（少ないと答えを丸暗記してしまう）
+  if (n < Math.max(3, Math.ceil(EXAM_FREQ[k] * 4))) warns.push(`論点「${k}」は年${EXAM_FREQ[k]}問出るのに${n}問しかない（目安${Math.max(3, Math.ceil(EXAM_FREQ[k] * 4))}問）`);
+}
+NUMBERS.forEach((x, i) => {
+  for (const k of ["f", "item", "v", "b"]) if (typeof x[k] !== "string" || !x[k].trim()) errors.push(`NUMBERS[${i}]: 項目 ${k} が空`);
+  if (!FIELDS.includes(x.f)) errors.push(`NUMBERS[${i}]: 分野名が不正: ${x.f}`);
+});
+
 // ---- 2. 過去問との重複チェック（著作権対策） ----
 const N = 20; // この文字数以上の一致を「重複」とみなす
 const pastDir = process.argv[2];
@@ -67,7 +88,7 @@ if (pastDir) {
 }
 
 // ---- 3. 集計 ----
-console.log(`法令基準日: ${LAW_AS_OF}　問題数: ${QUESTIONS.length}`);
+console.log(`法令基準日: ${LAW_AS_OF}　問題数: ${QUESTIONS.length}　論点数: ${topicKeys.size}　年間出題数の合計: ${Object.values(EXAM_FREQ).reduce((a, b) => a + b, 0).toFixed(1)}　数字まとめ: ${NUMBERS.length}項目`);
 for (const f of FIELDS) {
   const qs = QUESTIONS.filter(q => q.f === f);
   const o = qs.filter(q => q.a).length;
