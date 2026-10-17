@@ -4,7 +4,7 @@
      電波がないときは保存したものを使う
    - アプリや問題を更新したら VERSION の数字を1つ上げる
    ========================================================= */
-const VERSION = 'v4';
+const VERSION = 'v5';
 const CACHE = 'takkenmogi-' + VERSION;
 
 const APP_FILES = [

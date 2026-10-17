@@ -9,7 +9,7 @@
    ========================================================= */
 const fs = require("fs");
 const path = require("path");
-const { QUESTIONS, LAW_AS_OF, EXAM_FREQ, NUMBERS } = require("../questions.js");
+const { QUESTIONS, LAW_AS_OF, EXAM_FREQ, NUMBERS, YAMA } = require("../questions.js");
 
 const FIELDS = ["権利関係", "法令上の制限", "税・価格", "宅建業法", "5問免除"];
 const PREFIX = { "権利関係": "ken", "法令上の制限": "ho", "税・価格": "zei", "宅建業法": "gyo", "5問免除": "men" };
@@ -59,6 +59,16 @@ NUMBERS.forEach((x, i) => {
   for (const k of ["f", "item", "v", "b"]) if (typeof x[k] !== "string" || !x[k].trim()) errors.push(`NUMBERS[${i}]: 項目 ${k} が空`);
   if (!FIELDS.includes(x.f)) errors.push(`NUMBERS[${i}]: 分野名が不正: ${x.f}`);
 });
+// 民法 読解ドリルの印（k）
+QUESTIONS.forEach(q => {
+  if ("k" in q && q.k !== "読解") ng(q, `k の値が不正: ${q.k}`);
+  if (q.k === "読解" && q.f !== "権利関係") ng(q, "読解ドリルは権利関係の問題だけに付ける");
+});
+// 直前ヤマ当てテスト
+const yamaIds = new Set(YAMA.ids);
+if (yamaIds.size !== YAMA.ids.length) errors.push("YAMA: 同じ問題が重複している");
+YAMA.ids.forEach(id => { if (!ids.has(id)) errors.push(`YAMA: 問題 ${id} が存在しない`); });
+if (YAMA.ids.length !== 50) warns.push(`YAMA: 問題数が${YAMA.ids.length}問（50問の想定）`);
 
 // ---- 2. 過去問との重複チェック（著作権対策） ----
 const N = 20; // この文字数以上の一致を「重複」とみなす

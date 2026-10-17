@@ -65,6 +65,12 @@
   .menu button.primary small { color: var(--onmain); opacity: .85; }
   .menu button.final { background: var(--finalbg); color: var(--final); border: 2px solid var(--final); }
   .menu button.final small { color: var(--final); opacity: .85; }
+  .menu button.yama { background: var(--warnbg); color: var(--warn); border: 2px solid var(--warn); }
+  .menu button.yama small { color: var(--warn); opacity: .9; }
+  table.fscore { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  table.fscore td { padding: 6px 4px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  table.fscore td:last-child { width: 45%; }
+  table.fscore .gbar { margin: 0; height: 8px; }
   .menu .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
   /* 得点力の目安 */
@@ -213,7 +219,9 @@
 
     <div class="card">
       <div class="menu">
+        <button class="yama" id="yamaBtn">直前ヤマ当てテスト 50問<small>今年の法改正＋頻出論点。最後にまとめて採点</small></button>
         <button class="primary" id="focusBtn">頻出論点 集中チェック<small>本試験の出題数 × あなたの誤答率が大きい論点から20問</small></button>
+        <button id="kaidokuBtn">民法 読解ドリル<small id="kaidokuSub">本試験の言い回しに慣れる事例問題</small></button>
         <button id="smartBtn">今日の総復習 20問<small>要復習 → あやふや → 未回答 → 定着（古い順）で出題</small></button>
         <button class="final" id="finalBtn">最終決戦<small id="finalSub"></small></button>
         <div class="pair">
@@ -283,6 +291,10 @@
       <div class="score" id="score"></div>
       <div class="center" id="scoreSub"></div>
     </div>
+    <div class="card hidden" id="fieldCard">
+      <h2>分野別の正答数</h2>
+      <table class="fscore"><tbody id="fieldScore"></tbody></table>
+    </div>
     <div class="card" id="missCard">
       <h2>まちがえた問題</h2>
       <ul class="list" id="missList"></ul>
@@ -292,6 +304,21 @@
       <button id="homeBtn">ホームに戻る</button>
     </div>
     <p class="note" id="retryNote" style="margin-top:10px">すぐに解き直して正解しても「あやふや」のままです。日を変えてもう一度正解すると「定着」になります。</p>
+  </section>
+
+  <!-- 直前ヤマ当てテスト -->
+  <section id="yama" class="hidden">
+    <button class="back" id="yamaBack">← 戻る</button>
+    <h1>直前ヤマ当てテスト</h1>
+    <p class="lead">2026年度試験で狙われそうな論点を50問に絞りました。1問ごとの答え合わせはせず、最後にまとめて採点します。</p>
+    <div class="card">
+      <h2>今年のヤマ</h2>
+      <ul class="list" id="yamaReasons"></ul>
+    </div>
+    <div class="card">
+      <div class="menu"><button class="primary" id="yamaStart">テストを始める<small id="yamaSub"></small></button></div>
+      <p class="note" style="margin:10px 0 0">結果は学習記録にも反映されます。ヤマは本試験の出題を保証するものではありません。</p>
+    </div>
   </section>
 
   <!-- 頻出論点 集中チェック（論点の優先順位） -->
@@ -520,7 +547,7 @@ function focusDeck(topN = 5, n = 20) {
 // 画面
 // ============================================================
 function show(id) {
-  ["home", "quiz", "end", "focus", "final", "nums", "sheet"].forEach(s => $(s).classList.toggle("hidden", s !== id));
+  ["home", "quiz", "end", "yama", "focus", "final", "nums", "sheet"].forEach(s => $(s).classList.toggle("hidden", s !== id));
   window.scrollTo(0, 0);
 }
 
@@ -768,23 +795,39 @@ function itemLi(q, showRec) {
 // 出題
 // ============================================================
 let deck = [], idx = 0, correct = 0, wrongs = [], answered = false, deckName = "", undo = null;
+// テストモード：1問ごとに答え合わせをせず、最後にまとめて採点する（直前ヤマ当てテスト）
+let testMode = false, testStart = 0, testTimer = null;
 
-function startQuiz(items, name = "") {
+function startQuiz(items, name = "", test = false) {
   if (!items.length) return;
   deck = items; idx = 0; correct = 0; wrongs = []; deckName = name;
+  testMode = test;
+  clearInterval(testTimer);
+  if (testMode) { testStart = Date.now(); testTimer = setInterval(updateCounter, 1000); }
   show("quiz");
   renderQ();
+}
+function elapsed() {
+  const s = Math.floor((Date.now() - testStart) / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+function updateCounter() {
+  $("counter").textContent = testMode
+    ? `${idx + 1} / ${deck.length}　経過 ${elapsed()}`
+    : `${idx + 1} / ${deck.length}　正解 ${correct}`;
 }
 function renderQ() {
   const q = deck[idx];
   answered = false; undo = null;
-  $("counter").textContent = `${idx + 1} / ${deck.length}　正解 ${correct}`;
+  updateCounter();
   $("prog").style.width = (idx / deck.length * 100) + "%";
   $("qfield").textContent = q.f;
   $("qtopic").textContent = q.t;
   const r = rec[q.id];
-  $("qhist").classList.toggle("hidden", !(r && r.w));
-  if (r && r.w) $("qhist").textContent = `誤答${r.w}回`;
+  // テスト中は過去の誤答回数を出さない（答えのヒントになるため）
+  const showHist = !testMode && r && r.w;
+  $("qhist").classList.toggle("hidden", !showHist);
+  if (showHist) $("qhist").textContent = `誤答${r.w}回`;
   $("qtext").textContent = q.q;
   document.querySelectorAll(".choice").forEach(b => { b.disabled = false; b.classList.remove("dim"); });
   $("result").classList.add("hidden");
@@ -799,6 +842,7 @@ function answer(userO) {
   rec[q.id] = applyResult(undo, ok, false);
   saveRec();
   if (ok) correct++; else wrongs.push(q);
+  if (testMode) { next(); return; } // テスト中は答えを見せずに次の問題へ
   document.querySelectorAll(".choice").forEach(b => {
     b.disabled = true;
     if ((b.dataset.a === "1") !== q.a) b.classList.add("dim");
@@ -841,10 +885,28 @@ function next() {
   if (idx < deck.length) renderQ(); else finish();
 }
 function finish() {
+  clearInterval(testTimer);
   $("prog").style.width = "100%";
   $("endTitle").textContent = deckName ? `結果（${deckName}）` : "結果";
   $("score").textContent = `${correct} / ${deck.length}`;
-  $("scoreSub").textContent = correct === deck.length ? "全問正解！" : `正答率 ${pct(correct / deck.length)}`;
+  $("scoreSub").textContent = (correct === deck.length ? "全問正解！" : `正答率 ${pct(correct / deck.length)}`)
+    + (testMode ? `　所要時間 ${elapsed()}` : "");
+  // テストの結果は分野別にも集計する
+  $("fieldCard").classList.toggle("hidden", !testMode);
+  if (testMode) {
+    $("fieldScore").innerHTML = "";
+    FIELDS.forEach(f => {
+      const all = deck.filter(q => q.f === f);
+      if (!all.length) return;
+      const miss = wrongs.filter(q => q.f === f).length;
+      const ok = all.length - miss;
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td></td><td>${ok} / ${all.length}</td><td><div class="gbar"><div style="width:${ok / all.length * 100}%"></div></div></td>`;
+      tr.firstChild.textContent = f;
+      $("fieldScore").appendChild(tr);
+    });
+  }
+  testMode = false;
   $("missCard").classList.toggle("hidden", !wrongs.length);
   $("retryMissBtn").classList.toggle("hidden", !wrongs.length);
   $("retryNote").classList.toggle("hidden", !wrongs.length);
@@ -910,6 +972,28 @@ $("focusBack").onclick = renderHome;
 $("focusStart").onclick = () => startQuiz(focusDeck(), "集中チェック");
 $("focusMissOnly").onchange = renderFocus;
 $("smartBtn").onclick = () => startQuiz(smartDeck(), "今日の総復習");
+// 民法 読解ドリル：事例形式の問題を、要復習 → 未回答 → … の順で
+$("kaidokuBtn").onclick = () => startQuiz(spread(byPriority(QUESTIONS.filter(q => q.k === "読解"))), "民法 読解ドリル");
+// 直前ヤマ当てテスト
+function renderYama() {
+  const ul = $("yamaReasons");
+  ul.innerHTML = "";
+  YAMA.reasons.forEach(r => {
+    const li = document.createElement("li");
+    li.innerHTML = "<b></b><div class=\"note\"></div>";
+    li.querySelector("b").textContent = r.t;
+    li.querySelector(".note").textContent = r.d;
+    ul.appendChild(li);
+  });
+  $("yamaSub").textContent = `${YAMA.ids.length}問（目安 ${Math.round(YAMA.ids.length * 0.6)}分）・分野が混ざった順で出題`;
+  show("yama");
+}
+$("yamaBtn").onclick = renderYama;
+$("yamaBack").onclick = renderHome;
+$("yamaStart").onclick = () => {
+  const qs = YAMA.ids.map(id => QUESTIONS.find(q => q.id === id));
+  startQuiz(spread(shuffle(qs)), "直前ヤマ当てテスト", true);
+};
 $("weakBtn").onclick = () => startQuiz(spread(byPriority(QUESTIONS.filter(isWeak))), "要復習");
 $("allBtn").onclick = () => startQuiz(spread(shuffle(QUESTIONS.slice())), "全問");
 $("finalBtn").onclick = renderFinal;
@@ -925,7 +1009,7 @@ $("sheetBack").onclick = renderHome;
 $("sheetWeak").onchange = renderSheet;
 document.querySelectorAll(".choice").forEach(b => b.onclick = () => answer(b.dataset.a === "1"));
 $("nextBtn").onclick = next;
-$("quitBtn").onclick = renderHome;
+$("quitBtn").onclick = () => { clearInterval(testTimer); testMode = false; renderHome(); };
 $("homeBtn").onclick = renderHome;
 $("retryMissBtn").onclick = () => startQuiz(spread(shuffle(wrongs.slice())), "解き直し");
 $("exportBtn").onclick = exportRec;
